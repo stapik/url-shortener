@@ -1,0 +1,55 @@
+version: '3'
+services:
+
+  nginx:
+    container_name: nginx
+    restart: unless-stopped
+    image: linuxserver/swag
+    environment:
+      - TZ=Europe/Moscow
+      - URL=${YOUR_DOMAIN}
+      - SUBDOMAINS=www,
+      - VALIDATION=http
+    volumes:
+      - ./docker/nginx/config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+      - redirect
+
+  app:
+    container_name: app
+    restart: unless-stopped
+    image: openjdk:11
+    volumes:
+      - ./targets/${APP_JAR}:/home/${APP_JAR}:ro
+    command: [ "java", "-jar", "/home/${APP_JAR}" ]
+    depends_on:
+      - kafka
+
+  redirect:
+    container_name: redirect
+    restart: unless-stopped
+    image: openjdk:11
+    volumes:
+      - ./targets/${REDIRECT_JAR}:/home/${REDIRECT_JAR}:ro
+    command: [ "java", "-jar", "/home/${REDIRECT_JAR}" ]
+    depends_on:
+      - kafka
+
+  zookeeper:
+    container_name: zookeeper
+    restart: unless-stopped
+    image: wurstmeister/zookeeper
+
+  kafka:
+    container_name: kafka
+    restart: unless-stopped
+    image: wurstmeister/kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+    depends_on:
+      - zookeeper
